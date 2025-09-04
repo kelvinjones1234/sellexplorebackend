@@ -1,0 +1,2 @@
+INFO 2025-08-29 16:30:15,083 autoreload Watching for file changes with StatReloader
+INFO 2025-08-29 16:30:34,747 autoreload /home/praise/Desktop/PROJECTS/sellexplore/backend/core/settings.py changed, reloading.
