@@ -3,22 +3,22 @@ from .views import (
     CategoryDetailView,
     CategoryListCreateView,
     ProductCreateView,
-    # ProductDetailView,
+    ProductDetailView,
     ProductOptionDetailView,
     ProductOptionListCreateView,
-    PaginatedProductCreateView,
+    PaginatedProductListView,
     PaginatedCategoryListCreateView
 )
 
 urlpatterns = [
     # Category URLs
-    path("products-paginated/", PaginatedProductCreateView.as_view(), name="product-create"),
+    path("products-paginated/", PaginatedProductListView.as_view(), name="product-create"),
     path("products/", ProductCreateView.as_view(), name="product-create"),
     path("categories/", CategoryListCreateView.as_view(), name="category-list-create"),
     path("categories-paginated/", PaginatedCategoryListCreateView.as_view(), name="category-list-create"),
 
 
-    # path("products/<int:pk>/", ProductDetailView.as_view(), name="product-detail"),
+    path("products/<int:pk>/", ProductDetailView.as_view(), name="product-detail"),
     path(
         "categories/<int:pk>/", CategoryDetailView.as_view(), name="category-detail"
     ),

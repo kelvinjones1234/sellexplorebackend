@@ -31,9 +31,40 @@ class ProductCreateView(APIView):
             )
         print(serializer.errors)  # Debug serializer errors
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
 
 
-class PaginatedProductCreateView(APIView):
+
+class ProductDetailView(APIView):
+    def get(self, request, pk):
+        
+        product = get_object_or_404(Product, pk=pk)
+        serializer = ProductSerializer(product, context={"request": request})
+        return Response(serializer.data)
+
+    def put(self, request, pk): 
+        product = get_object_or_404(Product, pk=pk)
+        serializer = ProductSerializer(product, data=request.data, partial=True, context={"request": request})
+        
+        if serializer.is_valid():
+            
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk):
+        product = get_object_or_404(Product, pk=pk)
+        product.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+
+
+
+
+
+
+class PaginatedProductListView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, format=None):
@@ -75,22 +106,28 @@ class CategoryListCreateView(APIView):
 
 class CategoryDetailView(APIView):
     def get(self, request, pk):
+        
         category = get_object_or_404(Category, pk=pk)
         serializer = CategorySerializer(category)
         return Response(serializer.data)
 
     def put(self, request, pk):  # Add pk here
+        print("poster")
         category = get_object_or_404(Category, pk=pk)
         serializer = CategorySerializer(category, data=request.data, partial=True)
+        
         if serializer.is_valid():
+            
             serializer.save()
             return Response(serializer.data)
+        print("Validation errors:", serializer.errors)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, pk):
         category = get_object_or_404(Category, pk=pk)
         category.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
 
 
 
