@@ -68,7 +68,6 @@ class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
     email = models.EmailField(blank=True, null=True)
     full_name = models.CharField(max_length=255, blank=True, null=True)
-    picture = models.ImageField(upload_to="", blank=True, null=True)
     vendor = models.TextField(blank=True)
     phone_number = models.CharField(max_length=12)
     email_verified = models.BooleanField(default=False, db_index=True)

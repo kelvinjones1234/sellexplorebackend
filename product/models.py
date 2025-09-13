@@ -7,6 +7,8 @@ class Category(models.Model):
     name = models.CharField(max_length=100, unique=True)
     image = models.ImageField(upload_to="category/images/", blank=True, null=True)
     slug = models.SlugField(unique=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def save(self, *args, **kwargs):
         # Generate slug from name if not provided
@@ -28,8 +30,11 @@ class Product(models.Model):
     owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name="products")
     name = models.CharField(max_length=255)
     category = models.ForeignKey(
-        Category, on_delete=models.SET_NULL, null=True, blank=True,
-        related_name="product"
+        Category,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="product",
     )
     description = models.TextField(blank=True)
 
@@ -39,10 +44,14 @@ class Product(models.Model):
     )
 
     quantity = models.PositiveIntegerField(default=0)
-    availability = models.BooleanField(default=True)  # "Always available"
+    availability = models.BooleanField(default=False)
+    hot_deal = models.BooleanField(default=False)
+    featured = models.BooleanField(default=False)
+    recent = models.BooleanField(default=False)
     extra_info = models.TextField(blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.name
@@ -54,6 +63,8 @@ class ProductImage(models.Model):
     )
     image = models.ImageField(upload_to="products/images/")
     is_thumbnail = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"{self.product.name} - {'Thumbnail' if self.is_thumbnail else 'Image'}"
@@ -69,6 +80,8 @@ class ProductOption(models.Model):
     )
     name = models.CharField(max_length=100)  # e.g. "Size"
     image = models.ImageField(upload_to="products/options/", null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"{self.name} ({self.product.name})"

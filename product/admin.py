@@ -10,8 +10,6 @@ class CategoryAdmin(admin.ModelAdmin):
     list_filter = ["name"]
 
 
-
-
 class ProductImageInline(admin.TabularInline):
     model = ProductImage
     extra = 1  # how many empty forms to display
@@ -39,13 +37,13 @@ class ProductAdmin(admin.ModelAdmin):
         "discount_price",
         "quantity",
         "availability",
-        "created_at",
+        "updated_at",
     )
-    list_filter = ("availability", "category", "created_at")
+    list_filter = ("availability", "category", "updated_at")
     search_fields = ("name", "description", "extra_info", "owner__username")
     inlines = [ProductImageInline, ProductOptionInline]
-    readonly_fields = ("created_at",)
-    ordering = ("-created_at",)
+    readonly_fields = ("updated_at",)
+    ordering = ("-updated_at",)
 
 
 @admin.register(ProductImage)

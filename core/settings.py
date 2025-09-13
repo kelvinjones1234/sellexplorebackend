@@ -46,6 +46,8 @@ INSTALLED_APPS = [
     "account",
     "store_setting",
     "product",
+    "detail",
+    "public",
     # Default Django apps
     "django.contrib.admin",
     "django.contrib.auth",
@@ -61,6 +63,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
+    "django.middleware.http.ConditionalGetMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
@@ -183,6 +186,27 @@ CORS_ALLOWED_ORIGINS = [
 CORS_ALLOWED_ORIGIN_REGEXES = [
     r"^http:\/\/.*\.localhost:3000$",
     r"^https:\/\/.*\.sellexplore\.shop$",
+]
+
+CORS_EXPOSE_HEADERS = [
+    "ETag",
+    "Last-Modified",
+    "Cache-Control",
+]
+
+CORS_ALLOW_HEADERS = [
+    "accept",
+    "accept-encoding",
+    "authorization",
+    "content-type",
+    "dnt",
+    "origin",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
+    # Add these two headers for caching
+    "if-modified-since",
+    "if-none-match",
 ]
 
 
