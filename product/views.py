@@ -4,18 +4,17 @@ from rest_framework.response import Response
 from rest_framework import status
 from .serializers import (
     CategorySerializer,
-    ProductOptionSerializer,
+    ProductOptionsSerializer,
     ListCreateProductSerializer,
     UpdateProductSerializer,
     ProductImageSerializer,
 )
-from .models import Category, Product, ProductOption, ProductImage
+from .models import Category, Product, ProductOptions, ProductImage
 from rest_framework.permissions import IsAuthenticated
 from django.db.models import Count
 from rest_framework.pagination import PageNumberPagination
 import json
 from django.core.files.uploadedfile import UploadedFile
-
 
 
 class ProductCreateView(APIView):
@@ -31,7 +30,9 @@ class ProductCreateView(APIView):
 
     def post(self, request, format=None):
         print(request.data)  # Debug the incoming FormData
-        serializer = ListCreateProductSerializer(data=request.data, context={"request": request})
+        serializer = ListCreateProductSerializer(
+            data=request.data, context={"request": request}
+        )
         if serializer.is_valid():
             product = serializer.save()
             return Response(
@@ -40,20 +41,6 @@ class ProductCreateView(APIView):
             )
         print(serializer.errors)  # Debug serializer errors
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 class ProductDetailView(APIView):
@@ -79,51 +66,6 @@ class ProductDetailView(APIView):
         product = get_object_or_404(Product, pk=pk)
         product.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
-
-
-class ProductOptionUpdateView(APIView):
-    """
-    Update multiple options of a product in one request.
-    """
-
-    def put(self, request, product_pk):
-        product = get_object_or_404(Product, pk=product_pk)
-        options_data = request.data.getlist("options", [])
-        updated_options = []
-
-        for opt_data in options_data:
-            option_id = opt_data.get("id")
-            name = opt_data.get("name")
-            image_file = opt_data.get("image")
-            image_url = opt_data.get("image_url")
-
-            if not option_id:
-                continue
-
-            try:
-                option = ProductOption.objects.get(id=option_id, product=product)
-            except ProductOption.DoesNotExist:
-                continue
-
-            # Update name
-            option.name = name
-
-            # Update image if provided
-            if image_file:
-                option.image.save(image_file.name, image_file, save=True)
-            elif image_url:
-                option.image = image_url  # Retain existing image URL if no new file
-
-            serializer = ProductOptionSerializer(
-                option, data={"name": name, "is_thumbnail": False}, partial=True
-            )
-            if serializer.is_valid():
-                serializer.save()
-                updated_options.append(serializer.data)
-            else:
-                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-        return Response(updated_options, status=status.HTTP_200_OK)
 
 
 class ProductImageUpdateView(APIView):
@@ -307,36 +249,38 @@ class PaginatedCategoryListCreateView(APIView):
         return paginator.get_paginated_response(serializer.data)
 
 
-# Views for ProductOption
-class ProductOptionListCreateView(APIView):
+class ProductOptionsListCreateView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def get(self, request):
-        options = ProductOption.objects.all()
-        serializer = ProductOptionSerializer(options, many=True)
+        options = ProductOptions.objects.filter(as_template=True)  # ✅ only templates
+        serializer = ProductOptionsSerializer(options, many=True)
         return Response(serializer.data)
 
     def post(self, request):
-        serializer = ProductOptionSerializer(data=request.data)
+        serializer = ProductOptionsSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class ProductOptionDetailView(APIView):
+class ProductOptionsDetailView(APIView):
+
     def get(self, request, pk):
-        option = get_object_or_404(ProductOption, pk=pk)
-        serializer = ProductOptionSerializer(option)
+        option = get_object_or_404(ProductOptions, pk=pk)
+        serializer = ProductOptionsSerializer(option)
         return Response(serializer.data)
 
     def put(self, request, pk):
-        option = get_object_or_404(ProductOption, pk=pk)
-        serializer = ProductOptionSerializer(option, data=request.data, partial=True)
+        option = get_object_or_404(ProductOptions, pk=pk)
+        serializer = ProductOptionsSerializer(option, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, pk):
-        option = get_object_or_404(ProductOption, pk=pk)
+        option = get_object_or_404(ProductOptions, pk=pk)
         option.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)

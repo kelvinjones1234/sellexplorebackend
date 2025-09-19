@@ -6,11 +6,11 @@ from .views import (
     ProductDetailView,
     # ProductImageDeleteView,
     ProductImageUpdateView,
-    ProductOptionDetailView,
-    ProductOptionListCreateView,
+    ProductOptionsDetailView,
+    ProductOptionsListCreateView,
     PaginatedProductListView,
     PaginatedCategoryListCreateView,
-    ProductOptionUpdateView,
+    # ProductOptionsUpdateView,
 )
 
 urlpatterns = [
@@ -50,20 +50,20 @@ urlpatterns = [
     path("categories/", CategoryListCreateView.as_view(), name="category-list-create"),
     # update and delete product details
     path("products/<int:pk>/", ProductDetailView.as_view(), name="product-detail"),
-    path(
-        "products/<int:product_pk>/options/update/",
-        ProductOptionUpdateView.as_view(),
-        name="productoption-bulk-update",
-    ),
+    # path(
+    #     "products/<int:product_pk>/options/update/",
+    #     ProductOptionsUpdateView.as_view(),
+    #     name="ProductOptions-bulk-update",
+    # ),
     path(
         "product-options/<int:pk>/",
-        ProductOptionDetailView.as_view(),
+        ProductOptionsDetailView.as_view(),
         name="product-option-detail",
     ),
-    # ProductOption URLs
+    # ProductOptions URLs
     path(
         "product-options/",
-        ProductOptionListCreateView.as_view(),
+        ProductOptionsListCreateView.as_view(),
         name="product-option-list-create",
     ),
 ]

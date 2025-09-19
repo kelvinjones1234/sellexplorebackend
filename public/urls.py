@@ -1,6 +1,7 @@
 from django.urls import path
 from .views import (
     ProductGroupView,
+    ProductListFilterView,
     PublicStoreDetailView,
     PaginatedProductListView,
     CategoriesAndFeaturedItems,
@@ -24,6 +25,12 @@ urlpatterns = [
         "items/<str:store_name>/items/",
         PaginatedProductListView.as_view(),
         name="items",
+    ),
+    # 
+    path(
+        "items/<str:store_name>/filtered/",
+        ProductListFilterView.as_view(),
+        name="filter",
     ),
     # For featured products
     path(

@@ -4,7 +4,7 @@ from product.models import Product
 from product.serializers import (
     CategorySerializer,
     ProductImageSerializer,
-    ProductOptionSerializer,
+    ProductOptionsSerializer,
 )
 from store_setting.models import StoreConfigurations, Cover, Logo
 
@@ -48,7 +48,7 @@ class StoreSerializer(serializers.ModelSerializer):
 
 class FeaturedProductSerializer(serializers.ModelSerializer):
     images = ProductImageSerializer(many=True, required=False)
-    options = ProductOptionSerializer(many=True, required=False)
+    options = ProductOptionsSerializer(many=True, required=False)
     category = CategorySerializer(required=False)
 
     class Meta:

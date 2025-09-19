@@ -168,7 +168,7 @@ class PaginatedProductListView(APIView):
         paginator.page_size = int(request.GET.get("page_size", 10))
 
         queryset = paginator.paginate_queryset(products, request)
-        serializer = ListCreateProductSerializer(
+        serializer = FeaturedProductSerializer(
             queryset, many=True, context={"request": request}
         )
         return paginator.get_paginated_response(serializer.data)
@@ -212,3 +212,60 @@ class CategoriesAndFeaturedItems(CacheHeadersMixin, generics.GenericAPIView):
         })
 
         return self.finalize_response(request, response)
+
+
+
+
+
+
+
+class ProductListFilterView(APIView):
+    """
+    Public endpoint to list products by store_name.
+    Returns:
+      - total count
+      - first 4 products
+    Optional filters:
+      - ?search=<text>
+      - ?category=<slug>
+      - ?categories=slug1,slug2
+    """
+
+    permission_classes = [AllowAny]  # ❌ change to IsAuthenticated if private
+
+    def get(self, request, store_name, format=None):
+        # 1️⃣ Get store (User)
+        store = get_object_or_404(User, store_name__iexact=store_name, is_active=True)
+
+        # 2️⃣ Base queryset → products belonging to that store
+        products = Product.objects.filter(owner=store).order_by("-created_at")
+
+        # 3️⃣ Search filter
+        search = request.GET.get("search")
+        if search:
+            products = products.filter(
+                Q(name__icontains=search) | Q(description__icontains=search)
+            )
+
+        # 4️⃣ Category filters
+        category_slug = request.GET.get("category")
+        if category_slug:
+            products = products.filter(category__slug=category_slug)
+
+        categories = request.GET.get("categories")
+        if categories:
+            slug_list = [slug.strip() for slug in categories.split(",") if slug.strip()]
+            products = products.filter(category__slug__in=slug_list)
+
+        # 5️⃣ Prepare response → count + first 4 products
+        total_count = products.count()
+        first_four = products[:4]
+
+        serializer = FeaturedProductSerializer(
+            first_four, many=True, context={"request": request}
+        )
+
+        return Response({
+            "count": total_count,
+            "results": serializer.data
+        })

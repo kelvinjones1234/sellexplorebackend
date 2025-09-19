@@ -1,7 +1,7 @@
+import json
 from rest_framework import serializers
-from .models import Product, ProductImage, ProductOption, Category
+from .models import OptionsNote, Product, ProductImage, ProductOptions, Category
 from django.db import transaction
-
 
 class ProductImageSerializer(serializers.ModelSerializer):
     class Meta:
@@ -10,7 +10,6 @@ class ProductImageSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
-        # Ensure the image URL is absolute
         request = self.context.get("request")
         if request and representation.get("image"):
             if not representation["image"].startswith(("http://", "https://")):
@@ -19,16 +18,24 @@ class ProductImageSerializer(serializers.ModelSerializer):
                 )
         return representation
 
-
-class ProductOptionSerializer(serializers.ModelSerializer):
+class ProductOptionsSerializer(serializers.ModelSerializer):
     class Meta:
-        model = ProductOption
-        fields = ["id", "name", "image"]
-
+        model = ProductOptions
+        fields = [
+            "id",
+            "template_name",
+            "note",
+            "options",
+            "as_template",
+        ]
 
 class ListCreateProductSerializer(serializers.ModelSerializer):
     images = ProductImageSerializer(many=True, required=False)
-    options = ProductOptionSerializer(many=True, required=False)
+    options = serializers.ListField(required=False, allow_empty=True)
+
+    def validate_options(self, value):
+        print(f"Validating options: {value}")
+        return value
 
     class Meta:
         model = Product
@@ -50,76 +57,92 @@ class ListCreateProductSerializer(serializers.ModelSerializer):
         ]
 
     def to_internal_value(self, data):
-        # This method is needed for multipart/form-data submissions.
-        # For JSON APIs, this can often be removed.
+        print(f"📥 INCOMING DATA: {data}")
+        
         restructured_data = {}
         images_dict = {}
-        options_dict = {}
+        options_list = []
 
         for key, value in data.items():
             if key.startswith("images["):
-                # E.g., 'images[0][is_thumbnail]' -> parts = ['images', '0', 'is_thumbnail']
                 parts = key.replace("]", "").split("[")
                 index = int(parts[1])
                 field_name = parts[2]
 
-                # Group data by index in a dictionary
                 if index not in images_dict:
                     images_dict[index] = {}
                 images_dict[index][field_name] = value
 
-            elif key.startswith("options["):
-                parts = key.replace("]", "").split("[")
-                index = int(parts[1])
-                field_name = parts[2]
-
-                if index not in options_dict:
-                    options_dict[index] = {}
-                options_dict[index][field_name] = value
+            elif key == "options":
+                print(f"🔍 FOUND OPTIONS KEY: {key} = {value}")
+                try:
+                    # Handle case where value is a JSON string or a list
+                    parsed = (
+                        json.loads(value)
+                        if isinstance(value, str)
+                        else value
+                    )
+                    print(f"✅ PARSED OPTIONS: {parsed}")
+                    options_list = parsed if isinstance(parsed, list) else [parsed]
+                except Exception as e:
+                    print(f"❌ Failed to parse options: {e}")
+                    options_list = []  # Default to empty list if parsing fails
 
             else:
                 restructured_data[key] = value
 
-        # Convert the dictionaries to lists, sorted by index
         restructured_data["images"] = [
             images_dict[i] for i in sorted(images_dict.keys())
         ]
-        restructured_data["options"] = [
-            options_dict[i] for i in sorted(options_dict.keys())
-        ]
+        restructured_data["options"] = options_list
+        
+        print(f"📤 RESTRUCTURED DATA: {restructured_data}")
+        
+        result = super().to_internal_value(restructured_data)
+        print(f"🎯 FINAL VALIDATED DATA: {result}")
+        
+        return result
 
-        return super().to_internal_value(restructured_data)
-
-    @transaction.atomic  # Ensures the whole operation succeeds or fails together
+    @transaction.atomic
     def create(self, validated_data):
+        print(f"🏗️ CREATE METHOD - VALIDATED DATA: {validated_data}")
+        
         images_data = validated_data.pop("images", [])
         options_data = validated_data.pop("options", [])
+        
+        print(f"📷 IMAGES DATA: {images_data}")
+        print(f"⚙️ OPTIONS DATA: {options_data}")
 
-        # 1. Create the main product instance
         owner = self.context["request"].user
         product = Product.objects.create(owner=owner, **validated_data)
+        print(f"✅ PRODUCT CREATED: {product.id}")
 
-        # 2. Prepare image and option objects for bulk creation
-        images_to_create = [
-            ProductImage(product=product, **img_data) for img_data in images_data
-        ]
-        options_to_create = [
-            ProductOption(product=product, **opt_data) for opt_data in options_data
-        ]
+        if images_data:
+            ProductImage.objects.bulk_create(
+                [ProductImage(product=product, **img) for img in images_data]
+            )
+            print(f"📷 IMAGES CREATED: {len(images_data)}")
 
-        # 3. Create all images and options in just two queries
-        if images_to_create:
-            ProductImage.objects.bulk_create(images_to_create)
+        for opt_data in options_data:
+            note_instance = None
+            if opt_data.get("note"):
+                note_instance = OptionsNote.objects.create(note=opt_data["note"])
+                print(f"📝 NOTE CREATED: {note_instance.id}")
 
-        if options_to_create:
-            ProductOption.objects.bulk_create(options_to_create)
+            option_instance = ProductOptions.objects.create(
+                product=product,
+                note=note_instance,
+                options=opt_data.get("options", []),
+                as_template=opt_data.get("as_template", False),
+                template_name=opt_data.get("template_name"),
+            )
+            print(f"⚙️ PRODUCT OPTION CREATED: {option_instance.id}")
 
         return product
 
-
 class UpdateProductSerializer(serializers.ModelSerializer):
     images = ProductImageSerializer(many=True, required=False)
-    options = ProductOptionSerializer(many=True, required=False)
+    options = ProductOptionsSerializer(many=True, required=False)
 
     class Meta:
         model = Product
@@ -140,7 +163,6 @@ class UpdateProductSerializer(serializers.ModelSerializer):
             "options",
         ]
 
-
 class ProductSummarySerializer(serializers.ModelSerializer):
     images = serializers.SerializerMethodField()
 
@@ -149,12 +171,10 @@ class ProductSummarySerializer(serializers.ModelSerializer):
         fields = ["id", "name", "images"]
 
     def get_images(self, obj):
-        # return only 1 image (thumbnail if exists, otherwise first image)
         image = obj.images.filter(is_thumbnail=True).first() or obj.images.first()
         if image:
             return ProductImageSerializer(image).data
         return None
-
 
 class CategorySerializer(serializers.ModelSerializer):
     product_count = serializers.IntegerField(read_only=True)
@@ -169,3 +189,5 @@ class CategorySerializer(serializers.ModelSerializer):
         if obj.image:
             return request.build_absolute_uri(obj.image.url)
         return None
+
+

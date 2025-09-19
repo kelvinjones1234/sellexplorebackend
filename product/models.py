@@ -70,18 +70,35 @@ class ProductImage(models.Model):
         return f"{self.product.name} - {'Thumbnail' if self.is_thumbnail else 'Image'}"
 
 
-class ProductOption(models.Model):
-    """
-    Options like Size, Color, Packaging.
-    """
+class OptionsNote(models.Model):
 
-    product = models.ForeignKey(
-        Product, on_delete=models.CASCADE, related_name="options"
-    )
-    name = models.CharField(max_length=100)  # e.g. "Size"
-    image = models.ImageField(upload_to="products/options/", null=True, blank=True)
+    note = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.name} ({self.product.name})"
+        return self.note[:20]
+
+
+class ProductOptions(models.Model):
+    product = models.ForeignKey(
+        "Product", on_delete=models.CASCADE, related_name="product_options"
+    )
+    note = models.ForeignKey(
+        OptionsNote,
+        on_delete=models.CASCADE,
+        related_name="text_options",
+        null=True,
+        blank=True,
+    )
+
+    options = models.JSONField()  # e.g., ["S", "M", "L"]
+    as_template = models.BooleanField(default=False)
+    template_name = models.CharField(max_length=200, blank=True, null=True, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.product.name} - {'Template: ' + self.template_name if self.as_template else 'Option'}"
+
+
